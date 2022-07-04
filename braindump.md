@@ -65,3 +65,98 @@ The `write` syscll looks like where node sends the response, so let's probe that
 
 I was probing syscalls but what we need to look at for `perf probe -x` is library calls in userspace, so we need ltrace. But on my M1 (which is arch arm64), there's no ltrace package. Switching to another laptop to test this instead.
 
+Attached ltrace to the Node process (`ltrace -p $(pgrep -n node) -o ltrace.out`) and got some output, but it didn't yield anything promising. Didn't find any actual Node function calls, mostly system calls:
+
+```
+6 __errno_location( <unfinished ...>
+1 _ZdlPv(0x48b23e0, 40, 3, 0x7fffffb7 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... _ZdlPv resumed> )                                                                                             = 0x4933840
+6 clock_gettime(6, 0x9c7c6d90, 0x9c7c6d90, 0xffffff60 <unfinished ...>
+1 _ZdlPv(0x48035a0, 0x1039e1e00729, 0x1039e1e006e1, 0x1039e1e051b9 <unfinished ...>
+6 <... clock_gettime resumed> )                                                                                      = 0
+1 <... _ZdlPv resumed> )                                                                                             = 0x48b23d0
+6 __errno_location( <unfinished ...>
+1 free(0x4811950 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... free resumed> )                                                                                               = <void>
+6 epoll_wait(9, 0x9c7c6e20, 1024, 0xffffffff <unfinished ...>
+1 _ZdlPv(0x4800f50, 1096, 0x7f409cb64b58, 0x48b23d0)                                                                 = 1
+1 free(0x4938770 <unfinished ...>
+6 <... epoll_wait resumed> )                                                                                         = 0xffffffff
+1 <... free resumed> )                                                                                               = <void>
+6 __errno_location( <unfinished ...>
+1 free(0x48f6f90 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... free resumed> )                                                                                               = <void>
+6 clock_gettime(6, 0x9c7c6d90, 0x9c7c6d90, 0xffffff60 <unfinished ...>
+1 _ZdlPv(0x47c4ff0, 64, 0x7f409cb64b58, 0x48f8f90 <unfinished ...>
+6 <... clock_gettime resumed> )                                                                                      = 0
+1 <... _ZdlPv resumed> )                                                                                             = 0x4829470
+6 __errno_location( <unfinished ...>
+1 clock_gettime(1, 0x7ffd26920520, 0xffffffff, 0x4829470 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+6 epoll_wait(9, 0x9c7c6e20, 1024, 0xffffffff <unfinished ...>
+1 <... clock_gettime resumed> )                                                                                      = 0
+1 pthread_mutex_lock(0x479bbe0, 0, 0x29a6b, 0x479dd90 <unfinished ...>
+6 <... epoll_wait resumed> )                                                                                         = 0xffffffff
+1 <... pthread_mutex_lock resumed> )                                                                                 = 0
+6 __errno_location( <unfinished ...>
+1 pthread_mutex_unlock(0x479bbe0, 0, 0, 1 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... pthread_mutex_unlock resumed> )                                                                               = 0
+6 clock_gettime(6, 0x9c7c6d90, 0x9c7c6d90, 0xffffff60 <unfinished ...>
+1 malloc(8192 <unfinished ...>
+6 <... clock_gettime resumed> )                                                                                      = 0
+1 <... malloc resumed> )                                                                                             = 0x48f6f90
+6 __errno_location( <unfinished ...>
+1 free(0x48f6f90 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... free resumed> )                                                                                               = <void>
+6 epoll_wait(9, 0x9c7c6e20, 1024, 0xffffffff <unfinished ...>
+1 pthread_mutex_lock(0x479bbe0, 0x7ffd26920510, 255, 0)                                                              = 0
+1 pthread_mutex_unlock(0x479bbe0, 0, 0, 1 <unfinished ...>
+6 <... epoll_wait resumed> )                                                                                         = 0xffffffff
+1 <... pthread_mutex_unlock resumed> )                                                                               = 0
+6 __errno_location( <unfinished ...>
+1 clock_gettime(1, 0x7ffd26920420, 0x479bbe0, 1 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+6 clock_gettime(6, 0x9c7c6d90, 0x9c7c6d90, 0xffffff60)                                                               = 0
+1 <... clock_gettime resumed> )                                                                                      = 0
+6 __errno_location( <unfinished ...>
+1 _Znwm(64, 0x4791850, 0x5f00de00c8, 512 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... _Znwm resumed> )                                                                                              = 0x47b5f20
+6 epoll_wait(9, 0x9c7c6e20, 1024, 0xffffffff <unfinished ...>
+1 _Znwm(1104, 0x36493cb22c79, 0, 0x49ea)                                                                             = 0x4803150
+1 _Znwm(1096, 0x7ffd269205a0, 0x4803150, 0x1f119482806a00e0 <unfinished ...>
+6 <... epoll_wait resumed> )                                                                                         = 0xffffffff
+1 <... _Znwm resumed> )                                                                                              = 0x4800f50
+6 __errno_location( <unfinished ...>
+1 malloc(1536 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... malloc resumed> )                                                                                             = 0x48d5720
+6 clock_gettime(6, 0x9c7c6d90, 0x9c7c6d90, 0xffffff60 <unfinished ...>
+1 memcpy(0x48d5720, "\210@\204\004\0\0\0\0\001\0\0\0\0\0\0\0{\354\3545\0\0\0\0\250@\204\004\0\0\0\0"..., 1536 <unfinished ...>
+6 <... clock_gettime resumed> )                                                                                      = 0
+1 <... memcpy resumed> )                                                                                             = 0x48d5720
+6 __errno_location( <unfinished ...>
+1 malloc(8192 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... malloc resumed> )                                                                                             = 0x48f6f90
+6 epoll_wait(9, 0x9c7c6e20, 1024, 0xffffffff <unfinished ...>
+1 _Znwm(256, 0x30ffffffff, 0x36ffffffff, 0x48f6fd8)                                                                  = 0x491f8d0
+1 _Znwm(512, 0, 0x491f8d0, 0x7f409cb64b00 <unfinished ...>
+6 <... epoll_wait resumed> )                                                                                         = 0xffffffff
+1 <... _Znwm resumed> )                                                                                              = 0x478af30
+6 __errno_location( <unfinished ...>
+1 malloc(3072 <unfinished ...>
+6 <... __errno_location resumed> )                                                                                   = 0x9c7ca660
+1 <... malloc resumed> )                                                                                             = 0x4811950
+```
+
+Attaching ltrace slowed down the Node process considerably. That's something to note.
+
+It doesn't look like NodeJS exposes tracepoints in the way that nginx does https://github.com/nodejs/diagnostics/issues/386. Need to look deeper into what Node exposes and why it's different from Nginx.
+
+Good place to start would be the Node tracing library mentioned in that issue.
