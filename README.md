@@ -7,4 +7,4 @@ Docker images to test out perf commands on different operating systems and archi
 ### Node
 - `cd node && docker-compose up -d`
 - `docker-compose exec app bash`
-- Run perf commands as you will normally.
+- Run perf commands as you would normally.
